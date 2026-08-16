@@ -1441,7 +1441,10 @@ namespace dxvk {
           REFIID      ReturnedInterface,
           void**      ppResource) {
     InitReturnPtr(ppResource);
-
+#ifdef DXVK_BUILD_UMD
+    Logger::warn("D3D11Device::OpenSharedResource: not supported in UMD");
+    return E_NOTIMPL;
+#else
     if (!(reinterpret_cast<uintptr_t>(hResource) & 0xc0000000)) {
       Logger::warn("D3D11Device::OpenSharedResource: Invalid shared handle type");
       return E_INVALIDARG;
@@ -1520,6 +1523,7 @@ namespace dxvk {
     /* try the legacy Proton shared resource implementation */
     return OpenSharedResourceGeneric<true>(
       hResource, ReturnedInterface, ppResource);
+#endif
   }
   
   
@@ -1528,7 +1532,10 @@ namespace dxvk {
           REFIID      ReturnedInterface,
           void**      ppResource) {
     InitReturnPtr(ppResource);
-
+#ifdef DXVK_BUILD_UMD
+    Logger::warn("D3D11Device::OpenSharedResource: not supported in UMD");
+    return E_NOTIMPL;
+#else
     if (reinterpret_cast<uintptr_t>(hResource) & 0xc0000000) {
       Logger::warn("D3D11Device::OpenSharedResource1: Invalid shared handle type");
       return E_INVALIDARG;
@@ -1618,6 +1625,7 @@ namespace dxvk {
     /* try the legacy Proton shared resource implementation */
     return OpenSharedResourceGeneric<false>(
       hResource, ReturnedInterface, ppResource);
+#endif
   }
 
   
@@ -3765,7 +3773,7 @@ namespace dxvk {
 
 
   HMODULE D3D11DXGIDevice::initVendorHacks() {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(DXVK_BUILD_UMD)
     if (m_dxvkAdapter->info().vendorId == uint32_t(DxvkGpuVendor::Intel)) {
       char sysdir[MAX_PATH], path[MAX_PATH];
       GetSystemDirectoryA(sysdir, sizeof(sysdir));
@@ -3781,7 +3789,7 @@ namespace dxvk {
   }
 
   void D3D11DXGIDevice::cleanupVendorHacks() {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(DXVK_BUILD_UMD)
     if (m_vendorHacks.igd10iumd64)
       ::FreeLibrary(m_vendorHacks.igd10iumd64);
 #endif

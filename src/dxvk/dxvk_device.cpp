@@ -27,6 +27,7 @@ namespace dxvk {
     m_checkpoints       (this),
     m_submissionQueue   (this, queueCallback) {
 
+#ifndef DXVK_BUILD_UMD
     if (adapter->kmtLocal()) {
       D3DKMT_CREATEDEVICE create = { };
       create.hAdapter = adapter->kmtLocal();
@@ -35,6 +36,7 @@ namespace dxvk {
       else
         m_kmtLocal = create.hDevice;
     }
+#endif
 
     determineShaderOptions();
 
@@ -46,11 +48,13 @@ namespace dxvk {
   
   
   DxvkDevice::~DxvkDevice() {
+#ifndef DXVK_BUILD_UMD
     if (m_kmtLocal) {
       D3DKMT_DESTROYDEVICE destroy = { };
       destroy.hDevice = m_kmtLocal;
       D3DKMTDestroyDevice(&destroy);
     }
+#endif
 
     // If we are being destroyed during/after DLL process detachment
     // from TerminateProcess, etc, our CS threads are already destroyed

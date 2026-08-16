@@ -1093,7 +1093,11 @@ namespace dxvk {
           GpuFlushType                FlushType,
           HANDLE                      hEvent,
           BOOL                        Synchronize) {
+#ifdef DXVK_BUILD_UMD
+    bool synchronizeSubmission = Synchronize;
+#else
     bool synchronizeSubmission = Synchronize && m_parent->Is11on12Device();
+#endif
 
     if (synchronizeSubmission)
       m_submitStatus.result = VK_NOT_READY;
