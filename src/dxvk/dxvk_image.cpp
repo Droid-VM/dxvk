@@ -157,7 +157,14 @@ namespace dxvk {
     m_globalLayout = (m_info.sharing.mode != DxvkSharedHandleMode::Import)
       ? m_info.initialLayout : m_info.layout;
 
-    assignStorage(allocateStorage());
+    auto storage = allocateStorage();
+    if (!storage) {
+      // A failed constructor does not run ~DxvkImage. The D3D11 entry point
+      // catches DxvkError and reports failure instead of accessing null.
+      m_allocator->unregisterResource(this);
+      throw DxvkError("DxvkImage: Failed to allocate backing storage");
+    }
+    assignStorage(std::move(storage));
   }
 
 

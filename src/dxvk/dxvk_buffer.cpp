@@ -31,7 +31,14 @@ namespace dxvk {
     m_info.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
     // Create and assign actual buffer resource
-    assignStorage(allocateStorage());
+    auto storage = allocateStorage();
+    if (!storage) {
+      // A failed constructor does not run ~DxvkBuffer. Remove the resource
+      // from the allocator before propagating failure to the D3D11 caller.
+      m_allocator->unregisterResource(this);
+      throw DxvkError("DxvkBuffer: Failed to allocate backing storage");
+    }
+    assignStorage(std::move(storage));
   }
 
 

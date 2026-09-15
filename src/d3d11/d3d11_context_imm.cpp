@@ -1220,16 +1220,27 @@ namespace dxvk {
           HANDLE                      hEvent) {
     D3D10DeviceLock lock = LockContext();
 
+#ifndef DXVK_BUILD_UMD
     // If we're in tiler mode and a render pass hasn't been resolved yet,
     // ignore explicit flushes. This is a very dirty heuristic to work
     // around some Unity Engine performance issues.
     if (m_hasPendingUnresolvedPass && !m_parent->Is11on12Device())
       return;
+#endif
 
     if (unlikely(m_device->debugFlags().test(DxvkDebugFlag::Capture)))
       m_flushReason = "Explicit Flush";
 
     ExecuteFlush(GpuFlushType::ExplicitFlush, hEvent, true);
+
+#ifdef DXVK_BUILD_UMD
+    // The runtime can hand shared surfaces to another device after this DDI
+    // flush. vdrm submits bypass VidSch, and separate host GPU contexts do not
+    // inherit the runtime's resource dependencies. Complete this context's
+    // work before publishing it, including an earlier implicit submission
+    // when ExecuteFlush had no new commands to submit.
+    m_submissionFence->wait(m_submissionId);
+#endif
   }
 
 

@@ -9701,16 +9701,38 @@ namespace dxvk {
 
 
   void DxvkContext::prepareSharedImages() {
-    // Only flush clears for shared images, and restore layouts
-    bool hasSharedClear = false;
+    // A deferred clear may be the only use of a shared image, so it need
+    // not appear in m_nonDefaultLayoutImages yet. Publish all shared clears
+    // before restoring layouts for access by another device or process.
+    DxvkClearBatch clearBatch;
 
-    for (const auto& image : m_nonDefaultLayoutImages) {
-      if (image->info().shared)
-        hasSharedClear = flushDeferredClear(*image, image->getAvailableSubresources());
+    size_t src = 0u;
+    size_t dst = 0u;
+
+    while (src < m_deferredClears.size()) {
+      const auto& clear = m_deferredClears[src];
+
+      if (clear.imageView->image()->info().shared) {
+        clearBatch.add(batchClear(clear.imageView, -1,
+          clear.discardAspects, clear.clearAspects, clear.clearValue));
+      } else {
+        if (dst < src)
+          m_deferredClears[dst] = std::move(m_deferredClears[src]);
+
+        dst += 1u;
+      }
+
+      src += 1u;
     }
 
-    if (hasSharedClear)
+    // Remove the clears before executing them, since the out-of-order
+    // transfer path can inspect the pending clear list again.
+    m_deferredClears.resize(dst);
+
+    if (!clearBatch.empty()) {
+      performClears(clearBatch);
       flushBarriers();
+    }
 
     restoreImageLayouts([] (DxvkImage& image) {
       return image.info().shared;
