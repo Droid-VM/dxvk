@@ -9383,6 +9383,13 @@ namespace dxvk {
   void DxvkContext::endCurrentCommands() {
     endCurrentPass(true);
 
+#ifdef DXVK_BUILD_UMD
+    // A WDDM submission also completes clears of non-shared images. Keeping
+    // them across submissions retains released temporary textures indefinitely,
+    // including sources whose copies were optimized into destination clears.
+    flushClears(false);
+#endif
+
     prepareSharedImages();
 
     m_sdmaAcquires.finalize(m_cmd);
